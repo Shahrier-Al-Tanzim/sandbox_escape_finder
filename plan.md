@@ -1,5 +1,17 @@
 # SandboxEscapeFinder implementation plan
 
+## Completion record (2026-10-25)
+
+Stages 1 through 7 are implemented and merged on `main`. Each stage has its
+own branch and focused commit on the public GitHub repository
+`Shahrier-Al-Tanzim/sandbox_escape_finder`. The existing empty repository used
+an underscore in its name, so that is the published remote name. The final
+local check passed 21 tests, including the full Docker corpus integration
+test; the quickstart produced one AST finding and 15 per-payload reports with
+no unassessed runs. All seven branches and `main` are pushed. Merges were
+performed locally after stage tests, so there are no pull requests for these
+already merged stages.
+
 ## Goal and definition of done
 
 Build an installable Python package that combines an AST-based detector with a
