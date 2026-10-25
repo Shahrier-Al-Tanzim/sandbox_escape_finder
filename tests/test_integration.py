@@ -29,11 +29,30 @@ def test_full_corpus_against_restrictedpython() -> None:
     report = DynamicProber(sandbox, oracle, {"seed": 11}).run(load_corpus())
 
     assert len(report) == len(load_corpus())
+    assert len(report) == 19
+    assert sum(row["provenance"] == "catalog_adaptation" for row in report) >= 10
     assert all(row["status"] not in {"runner_error", "timeout"} for row in report)
     assert any(row["status"] == "ok" for row in report)
     assert any(row["static_flag"] for row in report)
     assert all(not row["dynamic_escape"] for row in report if row["kind"] == "control")
     assert summarize(report)["total"] == len(report)
+    assert all(row["goal"] == "canary_write" for row in report
+               if row["id"] in summarize(report)["static_false_positives"])
+    assert not ({"format-class", "format-map"} & set(summarize(report)["static_false_positives"]))
+
+    documented = {}
+    for line in (project_root / "README.md").read_text(encoding="utf-8").splitlines():
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) == 6 and cells[0].startswith("`"):
+            documented[cells[0].strip("`")] = cells
+    assert set(documented) == {row["id"] for row in report}
+    for row in report:
+        cells = documented[row["id"]]
+        assert cells[2] == {"canary_write": "Write", "capability_probe": "Capability",
+                            "control": "Control"}[row["goal"]]
+        assert cells[3] == ("Yes" if row["static_flag"] else "No")
+        assert cells[4] == row["status"].replace("_", " ")
+        assert cells[5] == ("Yes" if row["dynamic_escape"] else "No")
 
 
 @pytest.mark.integration

@@ -69,6 +69,8 @@ class DynamicProber:
                            "technique": getattr(payload, "technique", "custom"),
                            "source": getattr(payload, "source", "user supplied"),
                            "kind": getattr(payload, "kind", "attempt"),
+                           "goal": getattr(payload, "goal", "unspecified"),
+                           "provenance": getattr(payload, "provenance", "custom"),
                            "static_flag": flagged, "findings": findings,
                            "static_error": static_error, "executed": bool(result.get("executed")),
                            "status": status, "error_type": result.get("error_type"),
@@ -87,7 +89,9 @@ def summarize(report: list[dict[str, Any]]) -> dict[str, Any]:
         "total": len(report),
         "confirmed_escapes": [row["id"] for row in report if row["dynamic_escape"]],
         "static_only": [row["id"] for row in report if row["comparison"] == "static_only"],
-        "static_false_positives": [row["id"] for row in report if row["comparison"] == "static_only"],
+        "static_false_positives": [row["id"] for row in report
+                                   if row["comparison"] == "static_only"
+                                   and row.get("goal") == "canary_write"],
         "static_false_negatives": [row["id"] for row in report if row["comparison"] == "static_false_negative"],
         "unassessed": [row["id"] for row in report if row["comparison"] == "unassessed"],
     }

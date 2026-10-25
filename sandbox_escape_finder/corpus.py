@@ -7,13 +7,21 @@ from typing import Any
 
 class Payload(str):
     def __new__(cls, code: str, *, id: str = "custom", technique: str = "custom",
-                source: str = "user supplied", kind: str = "attempt") -> "Payload":
+                source: str = "user supplied", kind: str = "attempt",
+                goal: str = "unspecified", provenance: str = "custom") -> "Payload":
         if not isinstance(code, str) or not code.strip():
             raise ValueError("Payload code must be a nonempty string")
-        if not all(isinstance(value, str) and value for value in (id, technique, source, kind)):
+        if not all(isinstance(value, str) and value for value in
+                   (id, technique, source, kind, goal, provenance)):
             raise ValueError("Payload attribution fields must be nonempty strings")
+        if goal not in {"canary_write", "capability_probe", "control", "unspecified"}:
+            raise ValueError(f"Unsupported payload goal: {goal}")
+        if provenance not in {"catalog_adaptation", "task_inspired", "local_variant",
+                              "local_control", "custom"}:
+            raise ValueError(f"Unsupported payload provenance: {provenance}")
         obj = super().__new__(cls, code)
         obj.id, obj.technique, obj.source, obj.kind = id, technique, source, kind
+        obj.goal, obj.provenance = goal, provenance
         return obj
 
 
