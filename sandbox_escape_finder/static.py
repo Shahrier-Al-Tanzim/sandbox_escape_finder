@@ -90,7 +90,9 @@ class StaticAnalyzer:
                             fields = [f for _, f, _, _ in string.Formatter().parse(template) if f]
                         except ValueError:
                             fields = []
-                        if any(any(name in field for names in ATTRIBUTES.values() for name in names)
-                               for field in fields):
+                        sensitive_names = set().union(*ATTRIBUTES.values())
+                        if any(sensitive_names.intersection(
+                            field.replace("[", ".").replace("]", "").split(".")
+                        ) for field in fields):
                             add("format_traversal", node, 0.9, "Format field traverses sensitive attributes")
         return sorted(findings, key=lambda f: (f["lineno"], f["col_offset"], f["technique"]))

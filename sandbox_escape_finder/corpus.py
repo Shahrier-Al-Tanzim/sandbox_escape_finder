@@ -2,10 +2,12 @@
 import json
 import random
 from importlib.resources import files
+from typing import Any
 
 
 class Payload(str):
-    def __new__(cls, code, *, id="custom", technique="custom", source="user supplied", kind="attempt"):
+    def __new__(cls, code: str, *, id: str = "custom", technique: str = "custom",
+                source: str = "user supplied", kind: str = "attempt") -> "Payload":
         if not isinstance(code, str) or not code.strip():
             raise ValueError("Payload code must be a nonempty string")
         if not all(isinstance(value, str) and value for value in (id, technique, source, kind)):
@@ -15,7 +17,7 @@ class Payload(str):
         return obj
 
 
-def load_corpus(config=None):
+def load_corpus(config: dict[str, Any] | None = None) -> list[Payload]:
     """Load built-in and custom payloads, filter, then optionally seed-shuffle."""
     config = config or {}
     rows = json.loads(files("sandbox_escape_finder").joinpath("corpus.json").read_text(encoding="utf-8"))

@@ -45,7 +45,7 @@ def test_plain_strings_and_safe_source_do_not_match() -> None:
         ("function_internals", "value = obj.__globals_backup__"),
         ("builtins_recovery", "label = '__builtins__'"),
         ("frame_introspection", "value = obj.frame_count"),
-        ("format_traversal", 'result = "{0.name}".format(person)'),
+        ("format_traversal", 'result = "{0.__classroom__}".format(person)'),
         ("dynamic_execution", "result = execute_plan()"),
         ("forbidden_import", "import math"),
     ],
