@@ -6,11 +6,12 @@ Stages 1 through 7 are implemented and merged on `main`. Each stage has its
 own branch and focused commit on the public GitHub repository
 `Shahrier-Al-Tanzim/sandbox_escape_finder`. The existing empty repository used
 an underscore in its name, so that is the published remote name. The final
-local check passed 21 tests, including the full Docker corpus integration
+local check passed 28 tests, including the full Docker corpus integration
 test; the quickstart produced one AST finding and 15 per-payload reports with
 no unassessed runs. All seven branches and `main` are pushed. Merges were
 performed locally after stage tests, so there are no pull requests for these
-already merged stages.
+already merged stages. A follow-up `test/detector-negative-cases` branch added
+negative examples for each detector and is also merged and pushed.
 
 ## Goal and definition of done
 
