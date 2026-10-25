@@ -1,7 +1,10 @@
-"""Public API. Importing this package never executes payloads."""
+"""Static analysis utilities for evaluating Python sandbox policies.
+
+Importing this package never executes a payload.
+"""
 from .static import StaticAnalyzer
-from .dynamic import DynamicProber, CanaryOracle, DockerSandbox, summarize
 from .corpus import Payload, load_corpus
 
-__all__ = ["StaticAnalyzer", "DynamicProber", "CanaryOracle", "DockerSandbox",
-           "Payload", "load_corpus", "summarize"]
+__version__ = "0.1.0"
+
+__all__ = ["StaticAnalyzer", "Payload", "load_corpus"]
