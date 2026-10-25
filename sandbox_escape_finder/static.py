@@ -6,7 +6,7 @@ from typing import Any
 ATTRIBUTES = {
     "subclass_traversal": {"__class__", "__base__", "__bases__", "__mro__", "__subclasses__"},
     "function_internals": {"__globals__", "__closure__", "__code__", "cell_contents"},
-    "builtins_recovery": {"__builtins__", "__builtin__", "__import__"},
+    "builtins_recovery": {"__builtins__", "__builtin__", "__import__", "__self__"},
     "frame_introspection": {"gi_frame", "cr_frame", "ag_frame", "f_globals", "f_builtins",
                             "f_back", "tb_frame", "__traceback__"},
 }

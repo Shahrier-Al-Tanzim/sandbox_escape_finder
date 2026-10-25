@@ -20,6 +20,14 @@ container's tmpfs after the worker exits. An intentionally broken container
 fixture confirms that this external observer sees a canary write. The audit
 also corrected the report and plan wording below to match tested behavior.
 
+Stage 8 on `feat/stage-08-probe-validity` audited corpus provenance against
+specific upstream files and separated write-canary attempts from read-only
+capability probes. The extended corpus contains 17 attempts and two controls;
+11 attempts are catalog adaptations. All 19 rows were assessed in the Docker
+run, with no observed canary write. All 33 tests and the quickstart passed.
+The source links and goal-aware comparison are recorded in `corpus.json`, the
+report, and the README.
+
 ## Requirement cross-check
 
 | `task.md` requirement | Implementation evidence | Status |
@@ -28,10 +36,10 @@ also corrected the report and plan wording below to match tested behavior.
 | At least five AST technique classes with locations | Seven named detectors; positive and negative cases in `tests/test_static.py` | Met |
 | Isolated real RestrictedPython execution | `worker.py` uses `compile_restricted`; `runner.py` uses a fresh restricted Docker container per payload | Met |
 | Automated oracle | Separate Docker process reads the disposable canary; toy positive in `tests/test_integration.py` | Met |
-| At least ten attributed payloads and custom entries | Thirteen attempts plus two controls in `corpus.json`; `load_corpus` accepts `custom_payloads` | Met |
-| Static/dynamic mismatch analysis | Per-row `comparison`; `summarize` lists static-only/false-positive IDs, false negatives, and unassessed runs | Met |
+| At least ten attributed payloads and custom entries | Seventeen attempts plus two controls in `corpus.json`, including 11 adaptations linked to specific catalog files; `load_corpus` accepts `custom_payloads` | Met |
+| Static/dynamic mismatch analysis | Per-row `comparison` and `goal`; `summarize` lists all static-only IDs, goal-eligible false positives, false negatives, and unassessed runs | Met |
 | Seed-driven reproducibility | `seed` controls deterministic ordering and appears in each report row | Met |
-| Quickstart, tests, README, results table | `examples/quickstart.py`, 30 passing tests, and documented 15-row results table | Met |
+| Quickstart, tests, README, results table | `examples/quickstart.py`, 33 passing tests, and documented 19-row results table | Met |
 
 The result is an empirical check of this policy and corpus. No canary escape
 was observed in the full RestrictedPython run; that cannot establish the
@@ -165,7 +173,9 @@ when the same seed is supplied.
 
 Add derived false-positive and false-negative analysis:
 
-- static false positive: statically flagged but the oracle reports no escape;
+- static-only observation: statically flagged but the oracle reports no escape;
+- operational static false positive: a static-only observation whose payload
+  actually attempted the write-canary effect;
 - dynamic false negative: oracle confirms an escape but no relevant static
   finding exists.
 
@@ -212,6 +222,39 @@ Pass conditions: a new user can install and run the quickstart from the README,
 the public API snippet works, all claims match recorded test evidence, and the
 final review can explain every detector, isolation control, and oracle field.
 
+## Stage 8: make the experiment interpretable
+
+The initial corpus mixes programs that try to write the canary with programs
+that only inspect a class, frame, or format field. The latter cannot produce a
+positive write-canary result even in a permissive policy. Calling every
+flagged-but-negative row a static false positive therefore overstates what the
+experiment established. Several entries also cite only a catalog homepage,
+which is too broad for a research handoff.
+
+On `feat/stage-08-probe-validity`:
+
+1. Check every built-in payload against the two named upstream catalogs. Link
+   to a specific source file or example and label a payload as a catalog
+   adaptation, task-inspired probe, local variant, or local control. Keep at
+   least ten distinct catalog-attributed attempts.
+2. Give each payload an explicit goal: `canary_write`, `capability_probe`, or
+   `control`.
+   Include goal and provenance in per-payload reports. Preserve `static_only`
+   for every flagged, non-escaping row, but use `static_false_positives` only
+   for probes that actually attempt the write-canary effect. Explain that even
+   this is an operational label for this corpus, not a general error rate.
+3. Make write-capable catalog adaptations attempt the disposable canary where
+   feasible. Keep read-only capability probes visible rather than treating
+   their negative canary result as evidence of safety.
+4. Add tests for attribution metadata, goal-sensitive comparison, and the full
+   Docker corpus. Regenerate the README results table from a fresh run.
+
+Pass conditions: all catalog-attributed items have a specific source link,
+all rows state what effect was tested, the two mismatch summaries follow that
+goal, tests and quickstart pass, and the published table matches the new
+report. These changes improve the strength of the evaluation while keeping
+the task's public API and isolation boundary intact.
+
 ## Final release checklist
 
 - [x] Every stage branch has a focused commit; test and audit results are
@@ -221,7 +264,8 @@ final review can explain every detector, isolation control, and oracle field.
 - [x] `pip install -e .` works in a clean environment.
 - [x] Static analyzer has seven named technique classes with positive/negative
       tests and source locations.
-- [x] Corpus has at least ten attributed payloads and safe controls.
+- [x] Corpus has 17 attributed attempts, including 11 catalog adaptations,
+      plus two safe controls.
 - [x] Dynamic runs use fresh disposable isolation and an automated canary oracle.
 - [x] Reports include static verdict, execution status, timing, oracle result,
       and false-positive/false-negative comparisons.

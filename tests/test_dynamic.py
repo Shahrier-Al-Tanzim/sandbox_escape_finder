@@ -18,13 +18,25 @@ class ToySandbox:
 def test_prober_reports_static_only_and_static_false_negative() -> None:
     sandbox = ToySandbox()
     oracle = CanaryOracle(lambda: sandbox.marker)
-    corpus = [Payload("x.__class__", id="blocked", technique="subclass_traversal"),
+    corpus = [Payload("x.__class__", id="blocked", technique="subclass_traversal",
+                      goal="canary_write"),
               Payload("ESCAPE", id="missed", technique="custom")]
     report = DynamicProber(sandbox, oracle).run(corpus)
 
     assert [row["comparison"] for row in report] == ["static_only", "static_false_negative"]
     assert summarize(report)["static_false_negatives"] == ["missed"]
     assert summarize(report)["static_false_positives"] == ["blocked"]
+
+
+def test_capability_probe_is_not_counted_as_write_canary_false_positive() -> None:
+    sandbox = ToySandbox()
+    row = DynamicProber(sandbox, CanaryOracle(lambda: sandbox.marker)).run(
+        [Payload("x.__class__", id="read-only", technique="subclass_traversal",
+                 goal="capability_probe")]
+    )[0]
+    assert row["comparison"] == "static_only"
+    assert summarize([row])["static_only"] == ["read-only"]
+    assert summarize([row])["static_false_positives"] == []
 
 
 def test_unavailable_runner_is_unassessed() -> None:

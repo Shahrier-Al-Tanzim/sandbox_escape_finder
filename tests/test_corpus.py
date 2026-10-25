@@ -10,6 +10,12 @@ def test_corpus_is_attributed_and_parseable() -> None:
     assert len(corpus) >= 10
     assert len({payload.id for payload in corpus}) == len(corpus)
     assert all(payload.source and payload.technique for payload in corpus)
+    assert all(payload.goal != "unspecified" and payload.provenance != "custom"
+               for payload in corpus)
+    assert sum(payload.provenance == "catalog_adaptation" for payload in corpus) >= 10
+    assert all("/blob/" in payload.source for payload in corpus
+               if payload.provenance == "catalog_adaptation")
+    assert all(payload.goal == "control" for payload in corpus if payload.kind == "control")
     assert all(isinstance(StaticAnalyzer().scan(payload), list) for payload in corpus)
 
 
@@ -28,3 +34,6 @@ def test_custom_payloads_are_supported_and_validated() -> None:
 
     with pytest.raises(ValueError):
         load_corpus({"custom_payloads": [{"id": "subclasses-direct", "code": "x = 1"}]})
+
+    with pytest.raises(ValueError):
+        load_corpus({"custom_payloads": [{"id": "bad-goal", "code": "x = 1", "goal": "magic"}]})

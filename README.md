@@ -39,14 +39,14 @@ comparison = summarize(report)
 
 `StaticAnalyzer.scan(source_code)` returns dictionaries with technique, AST node type and dump, source excerpt, start/end line and column, confidence, and reason. Invalid source raises `SyntaxError`. `config` can set `detectors` (or `enabled_detectors`), `confidence_threshold`, and `allowed_imports`. Detection uses AST structure and bounded literal folding.
 
-`load_corpus(config)` loads seeded payloads plus `custom_payloads`, filters on `categories`, and can deterministically shuffle with `seed`. Each payload is a `str` with `id`, `technique`, `source`, and `kind` attributes. For example:
+`load_corpus(config)` loads seeded payloads plus `custom_payloads`, filters on `categories`, and can deterministically shuffle with `seed`. Each payload is a `str` with `id`, `technique`, `source`, `provenance`, `goal`, and `kind` attributes. `goal` is `canary_write`, `capability_probe`, or `control`. Custom payloads default to `unspecified` unless the caller sets a goal. For example:
 
 ```python
 custom = {"id": "my-test", "technique": "custom", "source": "local", "code": "answer = 1"}
 payloads = load_corpus({"custom_payloads": [custom], "categories": ["custom"]})
 ```
 
-`DynamicProber.run(payload_corpus)` accepts an iterable of strings and returns one dictionary per payload. It records static findings and flag, whether restricted execution began, status (`ok`, `compile_error`, `runtime_error`, `timeout`, or `runner_error`), error type, container exit code, seed, canary observation and verdict, elapsed milliseconds, and comparison class. `static_only` means the AST flagged an attempt and the oracle saw no escape; status shows how it was stopped. `summarize(report)["static_false_positives"]` lists these IDs under the task's operational definition. `static_false_negative` means the oracle saw an escape that the AST missed. Runner failures and timeouts without a canary hit are `unassessed`; an observed canary hit remains positive even if the worker fails or times out. These are per-corpus comparisons, not estimated population error rates.
+`DynamicProber.run(payload_corpus)` accepts an iterable of strings and returns one dictionary per payload. It records source and goal, static findings and flag, whether restricted execution began, status (`ok`, `compile_error`, `runtime_error`, `timeout`, or `runner_error`), error type, container exit code, seed, canary observation and verdict, elapsed milliseconds, and comparison class. `static_only` lists every AST-flagged item with no observed canary escape. `summarize(report)["static_false_positives"]` narrows this to items whose goal was `canary_write`; read-only capability probes cannot test the write-canary oracle and are excluded. `static_false_negative` means the oracle saw an escape that the AST missed. Runner failures and timeouts without a canary hit are `unassessed`; an observed canary hit remains positive even if the worker fails or times out. These are operational comparisons for this corpus, not estimated population error rates.
 
 ## Technique classes and policy behavior
 
@@ -54,7 +54,7 @@ payloads = load_corpus({"custom_payloads": [custom], "categories": ["custom"]})
 |---|---|---|
 | `subclass_traversal` | Class, base, MRO, and subclass attribute chains | The compiler rejects underscore-prefixed attribute access. |
 | `function_internals` | `__globals__`, `__closure__`, code objects, closure cells | The compiler rejects private attributes; guarded `getattr` also denies underscore attributes. |
-| `builtins_recovery` | `__builtins__` and `__import__` | The compiler rejects private names; execution receives only `safe_builtins`. |
+| `builtins_recovery` | `__builtins__`, `__import__`, and builtin function `__self__` | The compiler rejects private names; execution receives only `safe_builtins`. |
 | `frame_introspection` | Generator, coroutine, traceback, and frame attributes | Private frame paths are rejected at compile time or denied by the attribute guard. |
 | `format_traversal` | Sensitive format-field attribute paths | The supplied `safer_getattr` guard denies `str.format` access at runtime. |
 | `dynamic_execution` | Direct `eval`, `exec`, or `compile` | These are absent from `safe_builtins`; embedded private names can also be rejected by the compiler. |
@@ -70,31 +70,35 @@ The logical allowed directory is `/trial/allowed`. The canary path is `/trial/ou
 
 ## Observed results
 
-Full corpus run on 2026-10-25: Python 3.11.14, `RestrictedPython==8.1`, Docker Linux engine 28.5.1, `seed=11`. All 15 payloads were assessed. No canary write was observed. These are observations for this policy and corpus, not a proof of general security.
+Full corpus run on 2026-10-25: Python 3.11.14, `RestrictedPython==8.1`, Docker Linux engine 28.5.1, `seed=11`. All 19 payloads were assessed. No canary write was observed. These are observations for this policy and corpus, not a proof of general security.
 
-| Payload | Technique | Static flag | Execution status | Dynamic escape |
-|---|---|---:|---|---:|
-| `subclasses-direct` | subclass traversal | Yes | compile error | No |
-| `mro-subclasses` | subclass traversal | Yes | compile error | No |
-| `globals-direct` | function internals | Yes | compile error | No |
-| `closure-cell` | function internals | Yes | compile error | No |
-| `builtins-open` | builtins recovery | Yes | compile error | No |
-| `builtin-import` | builtins recovery | Yes | compile error | No |
-| `generator-frame` | frame introspection | Yes | compile error | No |
-| `exception-traceback` | frame introspection | Yes | compile error | No |
-| `format-class` | format traversal | Yes | runtime error | No |
-| `format-map` | format traversal | Yes | runtime error | No |
-| `eval-builtins` | dynamic execution | Yes | compile error | No |
-| `exec-open` | dynamic execution | Yes | compile error | No |
-| `direct-import` | forbidden import | Yes | runtime error | No |
-| `safe-arithmetic` | control | No | ok | No |
-| `safe-list` | control | No | ok | No |
+| Payload | Technique | Goal | Static flag | Execution status | Dynamic escape |
+|---|---|---|---:|---|---:|
+| `subclasses-direct` | subclass traversal | Write | Yes | compile error | No |
+| `mro-subclasses` | subclass traversal | Write | Yes | compile error | No |
+| `globals-direct` | function internals | Write | Yes | compile error | No |
+| `closure-cell` | function internals | Write | Yes | compile error | No |
+| `builtins-open` | builtins recovery | Write | Yes | compile error | No |
+| `builtin-import` | builtins recovery | Write | Yes | compile error | No |
+| `generator-frame` | frame introspection | Write | Yes | compile error | No |
+| `exception-traceback` | frame introspection | Write | Yes | compile error | No |
+| `format-class` | format traversal | Capability | Yes | runtime error | No |
+| `format-map` | format traversal | Capability | Yes | runtime error | No |
+| `eval-builtins` | dynamic execution | Write | Yes | compile error | No |
+| `exec-open` | dynamic execution | Write | Yes | compile error | No |
+| `direct-import` | forbidden import | Write | Yes | runtime error | No |
+| `wrap-close-sys` | function internals | Write | Yes | compile error | No |
+| `builtin-self` | builtins recovery | Write | Yes | compile error | No |
+| `getattr-dict` | function internals | Write | Yes | compile error | No |
+| `dict-getitem-method` | builtins recovery | Write | Yes | compile error | No |
+| `safe-arithmetic` | control | Control | No | ok | No |
+| `safe-list` | control | Control | No | ok | No |
 
-The 13 attempts are `static_only`: flagged by AST, blocked by compilation or runtime policy, and not confirmed as escapes. The two controls are neither flagged nor escaping. The intentionally broken toy sandbox test writes a canary and verifies that the oracle reports a positive result.
+The 17 attempts are `static_only`: flagged by AST, blocked by compilation or runtime policy, and not confirmed as escapes. Fifteen attempted the canary write; two were read-only capability probes and cannot establish a negative write-canary result. The two controls are neither flagged nor escaping. The intentionally broken toy sandbox test writes a canary and verifies that the oracle reports a positive result.
 
 ## References and attribution
 
-The payloads in `corpus.json` are short adaptations of technique classes described in the catalogs below. Each payload's `source` field identifies its source; code is adapted for the local marker test.
+Eleven of the 17 attempts are short adaptations of specific files in the two catalogs below. The `source` field links to the exact upstream file and commit. Three probes are inspired by techniques named in `task.md`, and three are local variants. Their `provenance` fields keep these origins distinct. Every payload is adapted for the disposable marker test; none is presented as a verbatim upstream exploit.
 
 - [RestrictedPython documentation](https://restrictedpython.readthedocs.io/en/latest/)
 - [RestrictedPython basic usage](https://restrictedpython.readthedocs.io/en/latest/usage/basic_usage.html)
