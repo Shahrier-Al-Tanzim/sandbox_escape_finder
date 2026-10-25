@@ -1,0 +1,17 @@
+[
+  {"id":"subclasses-direct","technique":"subclass_traversal","source":"https://github.com/jailctf/pyjailbreaker","code":"classes = ().__class__.__base__.__subclasses__()"},
+  {"id":"mro-subclasses","technique":"subclass_traversal","source":"https://github.com/jailctf/pyjailbreaker","code":"classes = ().__class__.__mro__[1].__subclasses__()"},
+  {"id":"globals-direct","technique":"function_internals","source":"https://github.com/jailctf/pyjailbreaker","code":"def helper():\n    return 1\nb = helper.__globals__['__builtins__']\nb['open'](CANARY_PATH, 'w').write(MARKER)"},
+  {"id":"closure-cell","technique":"function_internals","source":"https://github.com/jailctf/pyjailbreaker","code":"def outer(x):\n    return lambda: x\nc = outer(1).__closure__[0].cell_contents"},
+  {"id":"builtins-open","technique":"builtins_recovery","source":"https://github.com/moshekaplan/python_sandbox_escapes","code":"__builtins__['open'](CANARY_PATH, 'w').write(MARKER)"},
+  {"id":"builtin-import","technique":"builtins_recovery","source":"https://github.com/moshekaplan/python_sandbox_escapes/blob/master/example.py","code":"module = __builtins__['__import__']('pathlib')\nmodule.Path(CANARY_PATH).write_text(MARKER)"},
+  {"id":"generator-frame","technique":"frame_introspection","source":"https://github.com/jailctf/pyjailbreaker","code":"frame = (x for x in ()).gi_frame\nb = frame.f_globals['__builtins__']"},
+  {"id":"exception-traceback","technique":"frame_introspection","source":"https://github.com/jailctf/pyjailbreaker","code":"try:\n    1 / 0\nexcept Exception as e:\n    frame = e.__traceback__.tb_frame\n    b = frame.f_builtins"},
+  {"id":"format-class","technique":"format_traversal","source":"https://github.com/jailctf/pyjailbreaker","code":"result = '{0.__class__.__mro__}'.format(())"},
+  {"id":"format-map","technique":"format_traversal","source":"https://github.com/jailctf/pyjailbreaker","code":"result = '{x.__class__}'.format_map({'x': ()})"},
+  {"id":"eval-builtins","technique":"dynamic_execution","source":"https://github.com/moshekaplan/python_sandbox_escapes","code":"eval(\"__import__('pathlib').Path(CANARY_PATH).write_text(MARKER)\")"},
+  {"id":"exec-open","technique":"dynamic_execution","source":"https://github.com/moshekaplan/python_sandbox_escapes","code":"exec(\"open(CANARY_PATH, 'w').write(MARKER)\")"},
+  {"id":"direct-import","technique":"forbidden_import","source":"https://github.com/moshekaplan/python_sandbox_escapes/blob/master/example.py","code":"import pathlib\npathlib.Path(CANARY_PATH).write_text(MARKER)"},
+  {"id":"safe-arithmetic","technique":"control","source":"control supplied by project","kind":"control","code":"answer = 2 + 2"},
+  {"id":"safe-list","technique":"control","source":"control supplied by project","kind":"control","code":"items = [1, 2, 3]"}
+]
