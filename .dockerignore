@@ -1,4 +1,5 @@
 *
 !pyproject.toml
+!README.md
 !sandbox_escape_finder/
 !sandbox_escape_finder/**
