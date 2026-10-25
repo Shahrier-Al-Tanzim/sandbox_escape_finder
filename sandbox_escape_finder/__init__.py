@@ -5,7 +5,9 @@ Importing this package never executes a payload.
 from .static import StaticAnalyzer
 from .corpus import Payload, load_corpus
 from .runner import DockerSandbox, CanaryOracle
+from .dynamic import DynamicProber, summarize
 
 __version__ = "0.1.0"
 
-__all__ = ["StaticAnalyzer", "Payload", "load_corpus", "DockerSandbox", "CanaryOracle"]
+__all__ = ["StaticAnalyzer", "DynamicProber", "Payload", "load_corpus",
+           "DockerSandbox", "CanaryOracle", "summarize"]
