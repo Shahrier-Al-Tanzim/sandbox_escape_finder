@@ -38,6 +38,23 @@ def test_plain_strings_and_safe_source_do_not_match() -> None:
     assert StaticAnalyzer().scan(source) == []
 
 
+@pytest.mark.parametrize(
+    ("technique", "source"),
+    [
+        ("subclass_traversal", "value = obj.__classroom__"),
+        ("function_internals", "value = obj.__globals_backup__"),
+        ("builtins_recovery", "label = '__builtins__'"),
+        ("frame_introspection", "value = obj.frame_count"),
+        ("format_traversal", 'result = "{0.name}".format(person)'),
+        ("dynamic_execution", "result = execute_plan()"),
+        ("forbidden_import", "import math"),
+    ],
+)
+def test_each_detector_has_a_negative_case(technique: str, source: str) -> None:
+    config = {"detectors": [technique], "allowed_imports": ["math"]}
+    assert StaticAnalyzer(config).scan(source) == []
+
+
 def test_detector_configuration_and_import_allow_list() -> None:
     source = "import math\neval('1')"
     analyzer = StaticAnalyzer({"enabled_detectors": ["forbidden_import"], "allowed_imports": ["math"]})
