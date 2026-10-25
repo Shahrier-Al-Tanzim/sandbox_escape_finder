@@ -46,7 +46,7 @@ custom = {"id": "my-test", "technique": "custom", "source": "local", "code": "an
 payloads = load_corpus({"custom_payloads": [custom], "categories": ["custom"]})
 ```
 
-`DynamicProber.run(payload_corpus)` accepts an iterable of strings and returns one dictionary per payload. It records static findings and flag, whether restricted execution began, status (`ok`, `compile_error`, `runtime_error`, `timeout`, or `runner_error`), error type, canary verdict, elapsed milliseconds, and comparison class. `static_only` means the AST flagged an attempt and the oracle saw no escape; status shows how it was stopped. `static_false_negative` means the oracle saw an escape that the AST missed. `unassessed` marks runner errors and timeouts. These are per-corpus comparisons, not estimated population error rates.
+`DynamicProber.run(payload_corpus)` accepts an iterable of strings and returns one dictionary per payload. It records static findings and flag, whether restricted execution began, status (`ok`, `compile_error`, `runtime_error`, `timeout`, or `runner_error`), error type, container exit code, seed, canary observation and verdict, elapsed milliseconds, and comparison class. `static_only` means the AST flagged an attempt and the oracle saw no escape; status shows how it was stopped. `summarize(report)["static_false_positives"]` lists these IDs under the task's operational definition. `static_false_negative` means the oracle saw an escape that the AST missed. Runner failures and timeouts without a canary hit are `unassessed`; an observed canary hit remains positive even if the worker fails or times out. These are per-corpus comparisons, not estimated population error rates.
 
 ## Technique classes and policy behavior
 
@@ -64,9 +64,9 @@ These are syntactic indicators. They can flag blocked code and miss obfuscated o
 
 ## Isolation and oracle
 
-Each `DockerSandbox(code)` call starts a new Linux container with an unprivileged user, read-only root filesystem, no network, no added capabilities, `no-new-privileges`, CPU/memory/PID limits, timeout, and small writable tmpfs at `/trial`. No host directory is mounted. The worker uses `compile_restricted`, `safe_builtins`, `safer_getattr`, guarded iteration, and no import hook.
+Each `DockerSandbox(code)` call starts a new Linux container with an unprivileged user, read-only root filesystem, no network, no added capabilities, `no-new-privileges`, CPU/memory/PID limits, timeout, and small writable tmpfs at `/trial`. No host directory is mounted. The worker uses `compile_restricted`, `safe_builtins`, `safer_getattr`, guarded iteration, and no import hook. The worker's stdout/stderr are discarded; bounded result and canary files are read after execution through separate Docker processes.
 
-The logical allowed directory is `/trial/allowed`. The canary path is `/trial/outside/canary` inside the disposable container. The worker gives restricted code the path and a random marker; `CanaryOracle` returns true when the post-run canary equals that marker and the baseline was empty. This measures an effect outside the Python policy's allowed directory. It does not mean the Docker container was escaped. The trusted worker reads the canary, so a payload that compromises the worker could tamper with its report. Separate Docker filesystem inspection would provide stronger evidence against that threat.
+The logical allowed directory is `/trial/allowed`. The canary path is `/trial/outside/canary` inside the disposable container. The worker gives restricted code the path and a random marker. After the worker exits, the host invokes a separate, bounded `docker exec` read of the canary file while the container is still isolated. `CanaryOracle` returns true when that observation equals the marker and the baseline was empty. This measures an effect outside the Python policy's allowed directory. It does not mean the Docker container was escaped. A payload that gains enough control over the container itself could still tamper with its filesystem before inspection; this tool does not establish container security.
 
 ## Observed results
 

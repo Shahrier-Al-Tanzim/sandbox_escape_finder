@@ -24,6 +24,7 @@ def test_prober_reports_static_only_and_static_false_negative() -> None:
 
     assert [row["comparison"] for row in report] == ["static_only", "static_false_negative"]
     assert summarize(report)["static_false_negatives"] == ["missed"]
+    assert summarize(report)["static_false_positives"] == ["blocked"]
 
 
 def test_unavailable_runner_is_unassessed() -> None:
@@ -33,3 +34,15 @@ def test_unavailable_runner_is_unassessed() -> None:
     report = DynamicProber(unavailable, lambda *args: False).run(["x.__class__"])
     assert report[0]["comparison"] == "unassessed"
     assert report[0]["status"] == "runner_error"
+
+
+def test_canary_hit_survives_worker_timeout() -> None:
+    class TimedOutSandbox(ToySandbox):
+        def __call__(self, code):
+            self.state = self.marker
+            return {"executed": False, "status": "timeout", "oracle_observed": True}
+
+    sandbox = TimedOutSandbox()
+    row = DynamicProber(sandbox, CanaryOracle(lambda: sandbox.marker)).run(["ESCAPE"])[0]
+    assert row["dynamic_escape"]
+    assert row["comparison"] == "static_false_negative"

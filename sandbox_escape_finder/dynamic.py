@@ -1,7 +1,7 @@
 """Compare AST indicators with observable effects of isolated execution."""
 import random
 import time
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 from .static import StaticAnalyzer
 
@@ -14,7 +14,9 @@ class DynamicProber:
     `pre_state()` may be exposed when the backend has a meaningful baseline.
     """
 
-    def __init__(self, sandbox_exec, oracle, config: dict[str, Any] | None = None):
+    def __init__(self, sandbox_exec: Callable[[str], dict[str, Any]],
+                 oracle: Callable[[Any, dict[str, Any], Any], bool],
+                 config: dict[str, Any] | None = None) -> None:
         if not callable(sandbox_exec) or not callable(oracle):
             raise TypeError("sandbox_exec and oracle must be callable")
         self.sandbox_exec = sandbox_exec
@@ -49,8 +51,9 @@ class DynamicProber:
                           "error_type": type(exc).__name__, "error": str(exc)[:1000]}
             post = self.sandbox_exec.snapshot() if hasattr(self.sandbox_exec, "snapshot") else None
             status = result.get("status", "runner_error")
-            assessed = status not in {"runner_error", "timeout"}
-            escaped = bool(self.oracle(pre, result, post)) if assessed else False
+            oracle_observed = result.get("oracle_observed", status not in {"runner_error", "timeout"})
+            escaped = bool(self.oracle(pre, result, post)) if oracle_observed else False
+            assessed = (oracle_observed and status not in {"runner_error", "timeout"}) or escaped
             flagged = bool(findings)
             if not assessed:
                 comparison = "unassessed"
@@ -70,6 +73,9 @@ class DynamicProber:
                            "static_error": static_error, "executed": bool(result.get("executed")),
                            "status": status, "error_type": result.get("error_type"),
                            "error": result.get("error"), "dynamic_escape": escaped,
+                           "oracle_observed": bool(oracle_observed),
+                           "container_exit_code": result.get("container_exit_code"),
+                           "seed": self.config.get("seed"),
                            "comparison": comparison,
                            "elapsed_ms": round((time.perf_counter() - started) * 1000, 3)})
         return report
@@ -81,6 +87,7 @@ def summarize(report: list[dict[str, Any]]) -> dict[str, Any]:
         "total": len(report),
         "confirmed_escapes": [row["id"] for row in report if row["dynamic_escape"]],
         "static_only": [row["id"] for row in report if row["comparison"] == "static_only"],
+        "static_false_positives": [row["id"] for row in report if row["comparison"] == "static_only"],
         "static_false_negatives": [row["id"] for row in report if row["comparison"] == "static_false_negative"],
         "unassessed": [row["id"] for row in report if row["comparison"] == "unassessed"],
     }

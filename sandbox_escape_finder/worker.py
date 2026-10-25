@@ -60,7 +60,7 @@ def main() -> None:
     if len(request["code"]) > 20000 or len(request["marker"]) > 100:
         raise ValueError("Request exceeds size limit")
     result = run(request["code"], request["marker"])
-    print(json.dumps(result), flush=True)
+    Path("/trial/runner-result.json").write_text(json.dumps(result), encoding="utf-8")
 
 
 if __name__ == "__main__":
