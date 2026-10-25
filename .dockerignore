@@ -1,0 +1,4 @@
+*
+!pyproject.toml
+!sandbox_escape_finder/
+!sandbox_escape_finder/**

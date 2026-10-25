@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sandbox-escape-finder"
+version = "0.1.0"
+description = "AST analysis and container-isolated RestrictedPython policy probes"
+requires-python = ">=3.11"
+dependencies = ["RestrictedPython==8.1"]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<9"]
+
+[tool.setuptools.packages.find]
+include = ["sandbox_escape_finder*"]
+
+[tool.setuptools.package-data]
+sandbox_escape_finder = ["corpus.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: requires the built Linux Docker image and running engine"]
